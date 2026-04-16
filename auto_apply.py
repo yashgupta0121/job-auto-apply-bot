@@ -1,5 +1,4 @@
 import requests
-import time
 import csv
 from datetime import datetime
 
@@ -15,6 +14,7 @@ def search_jobs():
     response = requests.get(url)
 
     if response.status_code != 200:
+        print("Failed to fetch jobs")
         return []
 
     jobs = response.json()
@@ -25,10 +25,11 @@ def search_jobs():
             continue
 
         title = job.get("position", "")
-        
+        company = job.get("company", "Unknown")
+
         if any(k.lower() in title.lower() for k in KEYWORDS):
             matched_jobs.append({
-                "company": job.get("company"),
+                "company": company,
                 "role": title,
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M")
             })
@@ -39,9 +40,9 @@ def search_jobs():
 def save_jobs(jobs):
     file = "applied_jobs.csv"
 
-    with open(file, mode="a", newline="") as f:
+    with open(file, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        
+
         for job in jobs[:10]:
             writer.writerow([
                 job["company"],
@@ -57,10 +58,12 @@ def main():
     jobs = search_jobs()
 
     print(f"Found {len(jobs)} matching jobs")
-    
-    save_jobs(jobs)
 
-    print("Jobs saved successfully")
+    if jobs:
+        save_jobs(jobs)
+        print("Jobs saved successfully")
+    else:
+        print("No jobs found")
 
 
 if __name__ == "__main__":
