@@ -1,8 +1,8 @@
-name: Job Auto Apply Bot
+name: Yash Job Auto Apply Bot
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # every 30 min
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -16,10 +16,16 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: "3.11"
 
       - name: Install dependencies
         run: pip install requests
 
       - name: Run bot
         run: python auto_apply.py
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-data
+          path: applied_jobs.csv
