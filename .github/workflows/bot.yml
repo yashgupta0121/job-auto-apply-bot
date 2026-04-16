@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: job-data
-          path: applied_jobs.csv
+          path: jobs_output.csv
