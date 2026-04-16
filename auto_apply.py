@@ -60,8 +60,11 @@ def search_jobs():
 
 
 def save_jobs(jobs):
-    with open("jobs_output.csv", mode="a", newline="", encoding="utf-8") as f:
+    with open("jobs_output.csv", mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
+
+        # header (important)
+        writer.writerow(["Company", "Role", "ATS", "URL", "Date"])
 
         for job in jobs:
             writer.writerow([
@@ -79,12 +82,13 @@ def main():
 
     print(f"Found {len(jobs)} matching jobs")
 
+    # ALWAYS create file
+    save_jobs(jobs)
+
     if jobs:
-        save_jobs(jobs)
         print("Saved successfully")
     else:
-        print("No matching jobs found")
-
+        print("No matching jobs found, but file created")
 
 if __name__ == "__main__":
     main()
