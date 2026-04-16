@@ -1,7 +1,8 @@
 import requests
 import time
+import csv
+from datetime import datetime
 
-# Keywords based on your resume
 KEYWORDS = [
     "Technical Business Analyst",
     "Business Systems Analyst",
@@ -9,45 +10,58 @@ KEYWORDS = [
     "Integration Business Analyst"
 ]
 
-REMOTE_FILTER = "remote"
-
 def search_jobs():
-    print("Searching jobs...")
-    
-    # Example API (RemoteOK)
     url = "https://remoteok.com/api"
     response = requests.get(url)
-    
+
     if response.status_code != 200:
         return []
-    
+
     jobs = response.json()
-    
     matched_jobs = []
-    
+
     for job in jobs:
         if not isinstance(job, dict):
             continue
-        
+
         title = job.get("position", "")
-        description = str(job)
         
         if any(k.lower() in title.lower() for k in KEYWORDS):
             matched_jobs.append({
                 "company": job.get("company"),
                 "role": title,
-                "url": job.get("url")
+                "date": datetime.now().strftime("%Y-%m-%d %H:%M")
             })
-    
+
     return matched_jobs
 
-def apply_jobs(jobs):
-    print(f"Applying to {len(jobs)} jobs...")
+
+def save_jobs(jobs):
+    file = "applied_jobs.csv"
+
+    with open(file, mode="a", newline="") as f:
+        writer = csv.writer(f)
+        
+        for job in jobs[:10]:
+            writer.writerow([
+                job["company"],
+                job["role"],
+                "Remote",
+                "Applied",
+                job["date"]
+            ])
+
+
+def main():
+    print("Searching jobs...")
+    jobs = search_jobs()
+
+    print(f"Found {len(jobs)} matching jobs")
     
-    for job in jobs[:10]:  # limit batch
-        print(f"Applied: {job['company']} - {job['role']}")
-        time.sleep(2)
+    save_jobs(jobs)
+
+    print("Jobs saved successfully")
+
 
 if __name__ == "__main__":
-    jobs = search_jobs()
-    apply_jobs(jobs)
+    main()
