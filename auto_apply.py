@@ -3,10 +3,11 @@ import csv
 from datetime import datetime
 
 KEYWORDS = [
-    "Technical Business Analyst",
-    "Business Systems Analyst",
-    "API Business Analyst",
-    "Business System Analyst",
+    "business analyst",
+    "technical business analyst",
+    "system analyst",
+    "product analyst",
+    "data analyst"
 ]
 
 def detect_ats(url):
@@ -30,6 +31,7 @@ def search_jobs():
     response = requests.get(url)
 
     if response.status_code != 200:
+        print("API failed")
         return []
 
     jobs = response.json()
@@ -39,11 +41,13 @@ def search_jobs():
         if not isinstance(job, dict):
             continue
 
-        title = job.get("position", "")
+        title = job.get("position", "").lower()
         link = job.get("url", "")
         company = job.get("company", "Unknown")
 
-        if any(k.lower() in title.lower() for k in KEYWORDS):
+        print("Checking:", title)  # debug line
+
+        if any(k in title for k in KEYWORDS):
             matched.append({
                 "company": company,
                 "role": title,
@@ -59,7 +63,7 @@ def save_jobs(jobs):
     with open("jobs_output.csv", mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
 
-        for job in jobs[:10]:
+        for job in jobs:
             writer.writerow([
                 job["company"],
                 job["role"],
@@ -73,11 +77,13 @@ def main():
     print("Searching jobs...")
     jobs = search_jobs()
 
-    print(f"Found {len(jobs)} jobs")
+    print(f"Found {len(jobs)} matching jobs")
 
-    save_jobs(jobs)
-
-    print("Saved successfully")
+    if jobs:
+        save_jobs(jobs)
+        print("Saved successfully")
+    else:
+        print("No matching jobs found")
 
 
 if __name__ == "__main__":
