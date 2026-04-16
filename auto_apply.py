@@ -6,89 +6,134 @@ KEYWORDS = [
     "business analyst",
     "technical business analyst",
     "system analyst",
-    "product analyst",
-    "data analyst"
+    "product analyst"
 ]
 
-def detect_ats(url):
-    if not url:
-        return "Unknown"
+# -------- GREENHOUSE --------
+def fetch_greenhouse():
+    jobs = []
+    boards_url = "https://boards-api.greenhouse.io/v1/boards"
+    res = requests.get(boards_url)
 
-    if "greenhouse" in url:
-        return "Greenhouse"
-    elif "lever" in url:
-        return "Lever"
-    elif "workday" in url:
-        return "Workday"
-    elif "ashby" in url:
-        return "Ashby"
-    else:
-        return "Direct/Other"
+    if res.status_code != 200:
+        return jobs
 
+    boards = res.json().get("boards", [])
 
-def search_jobs():
-    url = "https://remoteok.com/api"
-    response = requests.get(url)
+    for board in boards[:40]:  # limit
+        token = board.get("token")
 
-    if response.status_code != 200:
-        print("API failed")
-        return []
+        try:
+            job_url = f"https://boards-api.greenhouse.io/v1/boards/{token}/jobs"
+            job_res = requests.get(job_url)
 
-    jobs = response.json()
-    matched = []
+            if job_res.status_code != 200:
+                continue
 
-    for job in jobs:
-        if not isinstance(job, dict):
+            for job in job_res.json().get("jobs", []):
+                title = job.get("title", "").lower()
+
+                if any(k in title for k in KEYWORDS):
+                    jobs.append({
+                        "company": token,
+                        "role": job.get("title"),
+                        "url": job.get("absolute_url"),
+                        "source": "Greenhouse"
+                    })
+
+        except:
             continue
 
-        title = job.get("position", "").lower()
-        link = job.get("url", "")
-        company = job.get("company", "Unknown")
+    return jobs
 
-        print("Checking:", title)  # debug line
+
+# -------- LEVER --------
+def fetch_lever():
+    jobs = []
+    companies = [
+        "netflix", "shopify", "airbnb", "stripe", "datadog"
+    ]
+
+    for company in companies:
+        try:
+            url = f"https://api.lever.co/v0/postings/{company}?mode=json"
+            res = requests.get(url)
+
+            if res.status_code != 200:
+                continue
+
+            for job in res.json():
+                title = job.get("text", "").lower()
+
+                if any(k in title for k in KEYWORDS):
+                    jobs.append({
+                        "company": company,
+                        "role": job.get("text"),
+                        "url": job.get("hostedUrl"),
+                        "source": "Lever"
+                    })
+
+        except:
+            continue
+
+    return jobs
+
+
+# -------- REMOTIVE --------
+def fetch_remotive():
+    jobs = []
+    url = "https://remotive.com/api/remote-jobs"
+    res = requests.get(url)
+
+    if res.status_code != 200:
+        return jobs
+
+    for job in res.json().get("jobs", []):
+        title = job.get("title", "").lower()
 
         if any(k in title for k in KEYWORDS):
-            matched.append({
-                "company": company,
-                "role": title,
-                "url": link,
-                "ats": detect_ats(link),
-                "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+            jobs.append({
+                "company": job.get("company_name"),
+                "role": job.get("title"),
+                "url": job.get("url"),
+                "source": "Remotive"
             })
 
-    return matched
+    return jobs
 
 
-def save_jobs(jobs):
+# -------- SAVE --------
+def save_jobs(all_jobs):
     with open("jobs_output.csv", mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
 
-        # header (important)
-        writer.writerow(["Company", "Role", "ATS", "URL", "Date"])
+        writer.writerow(["Company", "Role", "Source", "Apply Link", "Date"])
 
-        for job in jobs:
+        for job in all_jobs:
             writer.writerow([
                 job["company"],
                 job["role"],
-                job["ats"],
+                job["source"],
                 job["url"],
-                job["date"]
+                datetime.now().strftime("%Y-%m-%d %H:%M")
             ])
 
 
+# -------- MAIN --------
 def main():
-    print("Searching jobs...")
-    jobs = search_jobs()
+    print("Fetching jobs from multiple sources...")
 
-    print(f"Found {len(jobs)} matching jobs")
+    jobs = []
+    jobs += fetch_greenhouse()
+    jobs += fetch_lever()
+    jobs += fetch_remotive()
 
-    # ALWAYS create file
+    print(f"Total jobs found: {len(jobs)}")
+
     save_jobs(jobs)
 
-    if jobs:
-        print("Saved successfully")
-    else:
-        print("No matching jobs found, but file created")
+    print("CSV file created successfully")
+
 
 if __name__ == "__main__":
     main()
